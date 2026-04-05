@@ -1,36 +1,45 @@
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
-const movieModel = require('./movie-model.js');
+const fs = require('fs');
 
 const app = express();
+app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Parse urlencoded bodies
-app.use(bodyParser.json()); 
+const dataPath = path.join(__dirname, '../ressources/movie.json');
+let movies = require(dataPath);
 
-// Serve static content in directory 'files'
-app.use(express.static(path.join(__dirname, 'files')));
-
-// Configure a 'get' endpoint for all movies..
+// Task 1.2: GET /movies (Gibt Objekt als Array zurück)
 app.get('/movies', function (req, res) {
-  /* Task 1.2. Remove the line below and eturn the movies from 
-     the model as an array */
-  res.sendStatus(404)
-})
+  res.json(Object.values(movies));
+});
 
-// Configure a 'get' endpoint for a specific movie
+// Task 2.1: GET /movies/:imdbID
 app.get('/movies/:imdbID', function (req, res) {
-  /* Task 2.1. Remove the line below and add the 
-    functionality here */
-  res.sendStatus(404)
-})
+  const movie = movies[req.params.imdbID];
+  if (movie) {
+    res.json(movie);
+  } else {
+    res.sendStatus(404);
+  }
+});
 
-/* Task 3.1 and 3.2.
-   - Add a new PUT endpoint
-   - Check whether the movie sent by the client already exists 
-     and continue as described in the assignment */
+// Task 3.1 & 3.2: PUT /movies/:imdbID (Speichert in Datei)
+app.put('/movies/:imdbID', function (req, res) {
+  const imdbID = req.params.imdbID;
+  const exists = !!movies[imdbID];
 
-app.listen(3000)
+  movies[imdbID] = req.body;
+  fs.writeFileSync(dataPath, JSON.stringify(movies, null, 2), 'utf-8');
 
-console.log("Server now listening on http://localhost:3000/")
+  if (exists) {
+    res.sendStatus(200);
+  } else {
+    res.status(201).json(movies[imdbID]);
+  }
+});
 
+app.listen(3000, () => {
+  console.log("Server now listening on http://localhost:3000/");
+});

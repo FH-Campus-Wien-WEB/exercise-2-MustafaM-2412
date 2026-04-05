@@ -1,0 +1,85 @@
+function setMovie(movie) {
+  for (const element of document.forms[0].elements) {
+    const name = element.id;
+    if (!name) continue; // Skip elements without ID
+    const value = movie[name];
+
+    if (name === "Genres") {
+      const options = element.options;
+      for (let index = 0; index < options.length; index++) {
+        const option = options[index];
+        // Safely handle arrays or strings
+        const genresArray = Array.isArray(value) ? value : (value ? value.split(", ") : []);
+        option.selected = genresArray.indexOf(option.value) >= 0;
+      }
+    } else if (name === "Actors" || name === "Directors" || name === "Writers") {
+      element.value = Array.isArray(value) ? value.join(", ") : (value || "");
+    } else {
+      element.value = value || "";
+    }
+  }
+}
+
+function getMovie() {
+  const movie = {};
+  const elements = Array.from(document.forms[0].elements).filter(element => element.id);
+
+  for (const element of elements) {
+    const name = element.id;
+    let value;
+
+    if (name === "Genres") {
+      value = [];
+      const options = element.options;
+      for (let index = 0; index < options.length; index++) {
+        const option = options[index];
+        if (option.selected) {
+          value.push(option.value);
+        }
+      }
+    } else if (name === "Metascore" || name === "Runtime" || name === "imdbRating") {
+      value = Number(element.value);
+    } else if (name === "Actors" || name === "Directors" || name === "Writers") {
+      value = element.value.split(",").map(item => item.trim());
+    } else {
+      value = element.value;
+    }
+    movie[name] = value;
+  }
+  return movie;
+}
+
+function putMovie() {
+  const movie = getMovie();
+  const imdbID = new URLSearchParams(window.location.search).get("imdbID");
+
+  const xhr = new XMLHttpRequest();
+  xhr.open("PUT", "/movies/" + imdbID);
+  xhr.setRequestHeader("Content-Type", "application/json");
+
+  xhr.onload = function () {
+    if (xhr.status === 200 || xhr.status === 201 || xhr.status === 204) {
+      location.href = "index.html";
+    } else {
+      alert("Saving of movie data failed. Status code was " + xhr.status);
+    }
+  };
+  xhr.send(JSON.stringify(movie));
+}
+
+// Lade-Logik beim Start
+window.onload = function() {
+  const imdbID = new URLSearchParams(window.location.search).get("imdbID");
+  if (!imdbID) return;
+
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", "/movies/" + imdbID);
+  xhr.onload = function () {
+    if (xhr.status === 200) {
+      setMovie(JSON.parse(xhr.responseText));
+    } else {
+      alert("Loading of movie data failed. Status was " + xhr.status);
+    }
+  };
+  xhr.send();
+};
